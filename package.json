@@ -7,7 +7,12 @@
     },
     "devDependencies": {
         "@hotwired/stimulus": "^3.0.0",
+        "daisyui": "^5.0.43",
         "vite": "^6.0",
         "vite-plugin-symfony": "^8.1"
+    },
+    "dependencies": {
+        "@tailwindcss/vite": "^4.1.10",
+        "tailwindcss": "^4.1.10"
     }
 }
