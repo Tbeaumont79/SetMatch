@@ -7,6 +7,7 @@
     },
     "devDependencies": {
         "@hotwired/stimulus": "^3.0.0",
+        "@symfony/stimulus-bridge": "^3.2.0 || ^4.0.0",
         "daisyui": "^5.0.43",
         "vite": "^6.0",
         "vite-plugin-symfony": "^8.1"
