@@ -6,6 +6,7 @@
         "build": "vite build"
     },
     "devDependencies": {
+        "@hotwired/stimulus": "^3.0.0",
         "vite": "^6.0",
         "vite-plugin-symfony": "^8.1"
     }

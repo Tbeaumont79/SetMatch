@@ -7,13 +7,19 @@ import symfonyPlugin from "vite-plugin-symfony";
 export default defineConfig({
     plugins: [
         /* react(), // if you're using React */
-        symfonyPlugin(),
+        symfonyPlugin({
+            stimulus: true,
+            stimulus: "./assets/other-dir/controllers.json",
+            stimulus: {
+                fetchMode: "lazy",
+            },
+        }),
     ],
     build: {
         rollupOptions: {
             input: {
-                app: "./assets/app.js"
+                app: "./assets/app.js",
             },
-        }
+        },
     },
 });
