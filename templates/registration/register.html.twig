@@ -1,0 +1,90 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Inscription - SetMatch{% endblock %}
+
+{% block body %}
+<div class="min-h-screen flex items-center justify-center bg-base-200">
+    <div class="card w-96 bg-base-100 shadow-xl">
+        <div class="card-body">
+            <h2 class="card-title text-2xl font-bold text-center mb-6">
+                <span class="text-primary">SetMatch</span> - Inscription
+            </h2>
+
+            {% for flash_error in app.flashes('verify_email_error') %}
+                <div class="alert alert-error mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>{{ flash_error }}</span>
+                </div>
+            {% endfor %}
+
+            {% if form_errors(registrationForm) %}
+                <div class="alert alert-warning mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.268 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                    <span>{{ form_errors(registrationForm) }}</span>
+                </div>
+            {% endif %}
+
+            {{ form_start(registrationForm, {'attr': {'class': 'space-y-4'}}) }}
+
+                <div class="form-control w-full">
+                    <label class="label">
+                        <span class="label-text">Adresse email</span>
+                    </label>
+                    {{ form_widget(registrationForm.email, {
+                        'attr': {
+                            'class': 'input input-bordered w-full',
+                            'placeholder': 'votre@email.com'
+                        }
+                    }) }}
+                    {{ form_errors(registrationForm.email) }}
+                </div>
+
+                <div class="form-control w-full">
+                    <label class="label">
+                        <span class="label-text">Mot de passe</span>
+                    </label>
+                    {{ form_widget(registrationForm.plainPassword, {
+                        'attr': {
+                            'class': 'input input-bordered w-full',
+                            'placeholder': '••••••••'
+                        }
+                    }) }}
+                    {{ form_errors(registrationForm.plainPassword) }}
+                </div>
+
+                <div class="form-control">
+                    <label class="label cursor-pointer">
+                        {{ form_widget(registrationForm.agreeTerms, {
+                            'attr': {'class': 'checkbox checkbox-primary'}
+                        }) }}
+                        <span class="label-text ml-2">
+                            J'accepte les <a href="#" class="link link-primary">conditions d'utilisation</a>
+                        </span>
+                    </label>
+                    {{ form_errors(registrationForm.agreeTerms) }}
+                </div>
+
+                <div class="form-control mt-6">
+                    <button type="submit" class="btn btn-primary">
+                        S'inscrire
+                    </button>
+                </div>
+
+                <div class="divider">OU</div>
+
+                <div class="text-center">
+                    <p class="text-sm">Déjà un compte ?</p>
+                    <a href="{{ path('app_login') }}" class="btn btn-outline btn-secondary">
+                        Se connecter
+                    </a>
+                </div>
+
+            {{ form_end(registrationForm) }}
+        </div>
+    </div>
+</div>
+{% endblock %}
