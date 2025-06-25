@@ -15,6 +15,7 @@ use Symfony\Component\Mime\Address;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use SymfonyCasts\Bundle\VerifyEmail\Exception\VerifyEmailExceptionInterface;
+use SymfonyCasts\Bundle\VerifyEmail\VerifyEmailHelperInterface;
 
 class RegistrationController extends AbstractController
 {
@@ -30,16 +31,13 @@ class RegistrationController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            /** @var string $plainPassword */
             $plainPassword = $form->get('plainPassword')->getData();
 
-            // encode the plain password
             $user->setPassword($userPasswordHasher->hashPassword($user, $plainPassword));
 
             $entityManager->persist($user);
             $entityManager->flush();
 
-            // generate a signed url and email it to the user
             $this->emailVerifier->sendEmailConfirmation('app_verify_email', $user,
                 (new TemplatedEmail())
                     ->from(new Address('staff@setmatch.com', 'staff'))
@@ -48,9 +46,12 @@ class RegistrationController extends AbstractController
                     ->htmlTemplate('registration/confirmation_email.html.twig')
             );
 
-            // do anything else you need here, like send an email
 
-            return $security->login($user, 'form_login', 'main');
+            $security->login($user, 'form_login', 'main');
+
+            $this->addFlash('success', 'Votre compte a été créé avec succès ! Un email de vérification vous a été envoyé.');
+
+            return $this->redirectToRoute('app_home');
         }
 
         return $this->render('registration/register.html.twig', [
@@ -59,24 +60,40 @@ class RegistrationController extends AbstractController
     }
 
     #[Route('/verify/email', name: 'app_verify_email')]
-    public function verifyUserEmail(Request $request): Response
+    public function verifyUserEmail(Request $request, VerifyEmailHelperInterface $verifyEmailHelper, EntityManagerInterface $entityManager): Response
     {
-        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
-
-        // validate email confirmation link, sets User::isVerified=true and persists
         try {
-            /** @var User $user */
-            $user = $this->getUser();
-            $this->emailVerifier->handleEmailConfirmation($request, $user);
+            $users = $entityManager->getRepository(User::class)->findBy(['isVerified' => false]);
+
+            $validatedUser = null;
+            foreach ($users as $testUser) {
+                try {
+                    $verifyEmailHelper->validateEmailConfirmationFromRequest(
+                        $request,
+                        (string) $testUser->getId(),
+                        (string) $testUser->getEmail()
+                    );
+                    $validatedUser = $testUser;
+                    break;
+                } catch (VerifyEmailExceptionInterface $e) {
+                    continue;
+                }
+            }
+
+            if (!$validatedUser) {
+                throw new VerifyEmailExceptionInterface('Aucun utilisateur correspondant trouvé pour ce lien de vérification');
+            }
+
+            $validatedUser->setIsVerified(true);
+            $entityManager->persist($validatedUser);
+            $entityManager->flush();
+
+            $this->addFlash('success', 'Votre email a été vérifié avec succès ! Vous pouvez maintenant vous connecter.');
+            return $this->redirectToRoute('app_login');
+
         } catch (VerifyEmailExceptionInterface $exception) {
-            $this->addFlash('verify_email_error', $exception->getReason());
-
-            return $this->redirectToRoute('app_register');
+            $this->addFlash('verify_email_error', 'Lien de vérification invalide ou expiré.');
+            return $this->redirectToRoute('app_login');
         }
-
-        // @TODO Change the redirect on success and handle or remove the flash message in your templates
-        $this->addFlash('success', 'Your email address has been verified.');
-
-        return $this->redirectToRoute('app_register');
     }
 }

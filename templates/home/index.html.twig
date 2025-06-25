@@ -1,19 +1,72 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Home{% endblock %}
+{% block title %}Accueil - SetMatch{% endblock %}
 
 {% block body %}
 
-    <div class="container h-screen flex flex-col items-center gap-4">
-        <h1 class="text-2xl font-bold">Feed</h1>
-        <div class="join flex gap-10 w-5/6 pt-10">
-            <input class="textarea join-item w-full max-h-4" placeholder="What's on your mind?" />
-            <button>
-            <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 24 24">
-	            <path fill="#b387fa" d="m12 2l.324.005a10 10 0 1 1-.648 0zm.613 5.21a1 1 0 0 0-1.32 1.497L13.584 11H8l-.117.007A1 1 0 0 0 8 13h5.584l-2.291 2.293l-.083.094a1 1 0 0 0 1.497 1.32l4-4l.073-.082l.064-.089l.062-.113l.044-.11l.03-.112l.017-.126L17 12l-.007-.118l-.029-.148l-.035-.105l-.054-.113l-.071-.111a1 1 0 0 0-.097-.112l-4-4z" />
-            </svg>
-            </button>
+<div class="container mx-auto px-4 py-8">
+    <!-- Messages Flash -->
+    {% for type, messages in app.flashes %}
+        {% for message in messages %}
+            <div class="alert alert-{{ type == 'success' ? 'success' : (type == 'error' ? 'error' : 'info') }} mb-4">
+                {% if type == 'success' %}
+                    <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                {% endif %}
+                <span>{{ message }}</span>
+            </div>
+        {% endfor %}
+    {% endfor %}
+
+    {% if app.user %}
+        <!-- Utilisateur connecté - Feed -->
+        <div class="max-w-2xl mx-auto">
+            <h1 class="text-3xl font-bold text-center mb-8">
+                Bienvenue {{ app.user.email }} ! 👋
+            </h1>
+
+            <!-- Créer un post -->
+            <div class="card bg-base-100 shadow-lg mb-8">
+                <div class="card-body">
+                    <h2 class="card-title">Partager quelque chose</h2>
+                    <div class="form-control">
+                        <textarea class="textarea textarea-bordered h-24" placeholder="Quoi de neuf ?"></textarea>
+                    </div>
+                    <div class="card-actions justify-end">
+                        <button class="btn btn-primary">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="m12 2l.324.005a10 10 0 1 1-.648 0zm.613 5.21a1 1 0 0 0-1.32 1.497L13.584 11H8l-.117.007A1 1 0 0 0 8 13h5.584l-2.291 2.293l-.083.094a1 1 0 0 0 1.497 1.32l4-4l.073-.082l.064-.089l.062-.113l.044-.11l.03-.112l.017-.126L17 12l-.007-.118l-.029-.148l-.035-.105l-.054-.113l-.071-.111a1 1 0 0 0-.097-.112l-4-4z" />
+                            </svg>
+                            Publier
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Feed des posts (pour l'instant vide) -->
+            <div class="text-center py-12">
+                <div class="text-6xl mb-4">📝</div>
+                <h3 class="text-xl font-semibold mb-2">Aucun post pour le moment</h3>
+                <p class="text-base-content/70">Soyez le premier à partager quelque chose !</p>
+            </div>
         </div>
-    </div>
+
+    {% else %}
+        <!-- Utilisateur non connecté - Page d'accueil publique -->
+        <div class="hero min-h-screen bg-base-200">
+            <div class="hero-content text-center">
+                <div class="max-w-md">
+                    <h1 class="text-5xl font-bold">SetMatch</h1>
+                    <p class="py-6">Connectez-vous avec d'autres passionnés de sport, organisez vos matchs et partagez vos moments.</p>
+                    <div class="flex gap-4 justify-center">
+                        <a href="{{ path('app_register') }}" class="btn btn-primary">S'inscrire</a>
+                        <a href="{{ path('app_login') }}" class="btn btn-outline">Se connecter</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
 
 {% endblock %}
