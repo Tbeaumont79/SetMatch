@@ -3,56 +3,52 @@
 namespace App\EventListener;
 
 use App\Entity\Post;
-use Doctrine\Common\EventSubscriber;
+use Doctrine\Bundle\DoctrineBundle\Attribute\AsEntityListener;
 use Doctrine\ORM\Events;
-use Doctrine\Persistence\Event\LifecycleEventArgs;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Mercure\HubInterface;
 use Symfony\Component\Mercure\Update;
 use Symfony\Component\Serializer\SerializerInterface;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
-final class PostEventListener implements EventSubscriber
+#[AsEntityListener(event: Events::postPersist, method: 'postPersist', entity: Post::class)]
+#[AsEntityListener(event: Events::postUpdate, method: 'postUpdate', entity: Post::class)]
+final class PostEventListener
 {
     public function __construct(
         private readonly HubInterface $hub,
         private readonly SerializerInterface $serializer,
-        private readonly LoggerInterface $logger
+        private readonly LoggerInterface $logger,
+        private readonly ValidatorInterface $validator
     ) {
     }
 
-    public function getSubscribedEvents(): array
+    public function postPersist(Post $post): void
     {
-        return [
-            Events::postPersist,
-            Events::postUpdate,
-        ];
+        $this->publishPostUpdate($post, 'created');
     }
 
-    public function postPersist(LifecycleEventArgs $args): void
+    public function postUpdate(Post $post): void
     {
-        $entity = $args->getObject();
-
-        if (!$entity instanceof Post) {
-            return;
-        }
-
-        $this->publishPostUpdate($entity, 'created');
-    }
-
-    public function postUpdate(LifecycleEventArgs $args): void
-    {
-        $entity = $args->getObject();
-
-        if (!$entity instanceof Post) {
-            return;
-        }
-
-        $this->publishPostUpdate($entity, 'updated');
+        $this->publishPostUpdate($post, 'updated');
     }
 
     private function publishPostUpdate(Post $post, string $action): void
     {
         try {
+            $violations = $this->validator->validate($post);
+            if ($violations->count() > 0) {
+                $errors = [];
+                foreach ($violations as $violation) {
+                    $errors[$violation->getPropertyPath()][] = $violation->getMessage();
+                }
+                $this->logger->warning('Post invalide détecté, publication Mercure annulée', [
+                    'post_id' => $post->getId(),
+                    'validation_errors' => $errors
+                ]);
+                return;
+            }
+
             if (!$post->getAuthor()) {
                 $this->logger->warning('Post sans auteur détecté, publication Mercure annulée', [
                     'post_id' => $post->getId()

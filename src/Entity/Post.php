@@ -6,6 +6,7 @@ use App\Repository\PostRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\HttpFoundation\File\File;
+use Symfony\Component\Validator\Constraints as Assert;
 use Vich\UploaderBundle\Mapping\Annotation as Vich;
 
 #[ORM\Entity(repositoryClass: PostRepository::class)]
@@ -18,9 +19,25 @@ class Post
     private ?int $id = null;
 
     #[ORM\Column(type: Types::TEXT)]
+    #[Assert\NotBlank(
+        message: 'Le contenu du post ne peut pas être vide.'
+    )]
+    #[Assert\Length(
+        min: 3,
+        max: 5000,
+        minMessage: 'Le contenu doit contenir au moins {{ limit }} caractères.',
+        maxMessage: 'Le contenu ne peut pas dépasser {{ limit }} caractères.'
+    )]
+    #[Assert\Regex(
+        pattern: '/^[^<>{}]*$/',
+        message: 'Le contenu contient des caractères non autorisés.'
+    )]
     private ?string $content = null;
 
     #[ORM\Column]
+    #[Assert\NotNull(
+        message: 'La date de création est obligatoire.'
+    )]
     private ?\DateTimeImmutable $created_at = null;
 
     #[ORM\Column(nullable: true)]
@@ -28,12 +45,31 @@ class Post
 
     #[ORM\ManyToOne(inversedBy: 'posts')]
     #[ORM\JoinColumn(nullable: false)]
+    #[Assert\NotNull(
+        message: 'Un post doit avoir un auteur.'
+    )]
+    #[Assert\Valid]
     private ?User $author = null;
 
     #[ORM\Column(length: 255, nullable: true)]
+    #[Assert\Length(
+        max: 255,
+        maxMessage: 'Le nom du fichier image ne peut pas dépasser {{ limit }} caractères.'
+    )]
     private ?string $image = null;
 
     #[Vich\UploadableField(mapping: 'post_images', fileNameProperty: 'image')]
+    #[Assert\File(
+        maxSize: '5M',
+        mimeTypes: [
+            'image/jpeg',
+            'image/png',
+            'image/webp',
+            'image/gif'
+        ],
+        mimeTypesMessage: 'Veuillez télécharger une image valide (JPEG, PNG, WebP, GIF).',
+        maxSizeMessage: 'L\'image ne doit pas dépasser {{ limit }}.'
+    )]
     private ?File $imageFile = null;
 
     public function __construct()
