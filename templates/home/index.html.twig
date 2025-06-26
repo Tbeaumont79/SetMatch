@@ -5,7 +5,7 @@
 {% block body %}
 
 <div class="container mx-auto px-4 py-8">
-    <!-- Messages Flash -->
+
     {% for type, messages in app.flashes %}
         {% for message in messages %}
             <div class="alert alert-{{ type == 'success' ? 'success' : (type == 'error' ? 'error' : 'info') }} mb-4">
@@ -20,23 +20,25 @@
     {% endfor %}
 
     {% if app.user %}
-        <!-- Utilisateur connecté - Feed -->
-        <div class="max-w-2xl mx-auto">
-            <h1 class="text-3xl font-bold text-center mb-8">
-                Bienvenue {{ app.user.email }} ! 👋
-            </h1>
 
-            <!-- Créer un post -->
+        <div class="max-w-2xl mx-auto">
+
             <div class="card bg-base-100 shadow-lg mb-8">
                 <div class="card-body">
                     <h2 class="card-title">Partager quelque chose</h2>
                     <div class="form-control">
-                        <textarea class="textarea textarea-bordered h-24" placeholder="Quoi de neuf ?"></textarea>
+                        <textarea class="textarea textarea-bordered h-24 w-full" placeholder="Quoi de neuf ?"></textarea>
+                    </div>
+                    <div class="form-control mt-4">
+                        <input type="file" class="file-input file-input-bordered file-input-primary w-full" accept="image/*" placeholder="Ajouter une image" />
+                        <label class="label">
+                            <span class="label-text-alt">Optionnel: Ajouter une image à votre post</span>
+                        </label>
                     </div>
                     <div class="card-actions justify-end">
                         <button class="btn btn-primary">
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="m12 2l.324.005a10 10 0 1 1-.648 0zm.613 5.21a1 1 0 0 0-1.32 1.497L13.584 11H8l-.117.007A1 1 0 0 0 8 13h5.584l-2.291 2.293l-.083.094a1 1 0 0 0 1.497 1.32l4-4l.073-.082l.064-.089l.062-.113l.044-.11l.03-.112l.017-.126L17 12l-.007-.118l-.029-.148l-.035-.105l-.054-.113l-.071-.111a1 1 0 0 0-.097-.112l-4-4z" />
+                                <path d="m12 2l.324.005a10 10 0 1 1-.648 0zmgit.613 5.21a1 1 0 0 0-1.32 1.497L13.584 11H8l-.117.007A1 1 0 0 0 8 13h5.584l-2.291 2.293l-.083.094a1 1 0 0 0 1.497 1.32l4-4l.073-.082l.064-.089l.062-.113l.044-.11l.03-.112l.017-.126L17 12l-.007-.118l-.029-.148l-.035-.105l-.054-.113l-.071-.111a1 1 0 0 0-.097-.112l-4-4z" />
                             </svg>
                             Publier
                         </button>
@@ -44,16 +46,72 @@
                 </div>
             </div>
 
-            <!-- Feed des posts (pour l'instant vide) -->
-            <div class="text-center py-12">
-                <div class="text-6xl mb-4">📝</div>
-                <h3 class="text-xl font-semibold mb-2">Aucun post pour le moment</h3>
-                <p class="text-base-content/70">Soyez le premier à partager quelque chose !</p>
-            </div>
+            {% if posts %}
+                <div class="space-y-6">
+                    {% for post in posts %}
+                        <div class="card bg-base-100 shadow-lg">
+                            <div class="card-body">
+                                <div class="flex items-center gap-3 mb-4">
+                                    <div class="avatar">
+                                        <div class="w-10 rounded-full">
+                                            {% if post.author.avatar %}
+                                                <img src="{{ post.author.avatar }}" alt="Avatar" />
+                                            {% else %}
+                                                <img src="https://img.daisyui.com/images/stock/photo-1534528741775-53994a69daeb.webp" alt="Avatar par défaut" />
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div class="font-semibold">{{ post.author.email|split('@')[0] }}</div>
+                                        <div class="text-sm text-base-content/70">
+                                            {{ post.createdAt|date('d/m/Y à H:i') }}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <p class="mb-4">{{ post.content }}</p>
+
+                                {% if post.image %}
+                                    <div class="mb-4">
+                                        <img src="{{ post.image }}" alt="Image du post" class="rounded-lg max-w-full h-auto" />
+                                    </div>
+                                {% endif %}
+
+                                <div class="card-actions justify-start">
+                                    <button class="btn btn-ghost btn-sm">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                                        </svg>
+                                        J'aime
+                                    </button>
+                                    <button class="btn btn-ghost btn-sm">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                                        </svg>
+                                        Commenter
+                                    </button>
+                                    <button class="btn btn-ghost btn-sm">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                                            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                                        </svg>
+                                        Partager
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-12">
+                    <div class="text-6xl mb-4">📝</div>
+                    <h3 class="text-xl font-semibold mb-2">Aucun post pour le moment</h3>
+                    <p class="text-base-content/70">Soyez le premier à partager quelque chose !</p>
+                </div>
+            {% endif %}
         </div>
 
     {% else %}
-        <!-- Utilisateur non connecté - Page d'accueil publique -->
         <div class="hero min-h-screen bg-base-200">
             <div class="hero-content text-center">
                 <div class="max-w-md">
