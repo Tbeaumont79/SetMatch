@@ -21,33 +21,30 @@
 
     {% if app.user %}
 
-        <div class="max-w-2xl mx-auto">
+        <div class="max-w-2xl mx-auto" data-controller="posts">
 
             <div class="card bg-base-100 shadow-lg mb-8">
                 <div class="card-body">
                     <h2 class="card-title">Partager quelque chose</h2>
-                    <div class="form-control">
-                        <textarea class="textarea textarea-bordered h-24 w-full" placeholder="Quoi de neuf ?"></textarea>
-                    </div>
-                    <div class="form-control mt-4">
-                        <input type="file" class="file-input file-input-bordered file-input-primary w-full" accept="image/*" placeholder="Ajouter une image" />
-                        <label class="label">
-                            <span class="label-text-alt">Optionnel: Ajouter une image à votre post</span>
-                        </label>
-                    </div>
-                    <div class="card-actions justify-end">
-                        <button class="btn btn-primary">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="m12 2l.324.005a10 10 0 1 1-.648 0zmgit.613 5.21a1 1 0 0 0-1.32 1.497L13.584 11H8l-.117.007A1 1 0 0 0 8 13h5.584l-2.291 2.293l-.083.094a1 1 0 0 0 1.497 1.32l4-4l.073-.082l.064-.089l.062-.113l.044-.11l.03-.112l.017-.126L17 12l-.007-.118l-.029-.148l-.035-.105l-.054-.113l-.071-.111a1 1 0 0 0-.097-.112l-4-4z" />
-                            </svg>
-                            Publier
-                        </button>
-                    </div>
+                    {{ form_start(form, {'attr': {'enctype': 'multipart/form-data'}}) }}
+                        <div class="form-control">
+                            {{ form_widget(form.content) }}
+                        </div>
+                        <div class="form-control mt-4">
+                            {{ form_widget(form.imageFile) }}
+                            <label class="label">
+                                <span class="label-text-alt">Optionnel: Ajouter une image à votre post</span>
+                            </label>
+                        </div>
+                        <div class="card-actions justify-end">
+                            {{ form_widget(form.submit, {'attr': {'class': 'btn btn-primary'}}) }}
+                        </div>
+                    {{ form_end(form) }}
                 </div>
             </div>
 
             {% if posts %}
-                <div class="space-y-6">
+                <div class="space-y-6" data-posts-target="feed">
                     {% for post in posts %}
                         <div class="card bg-base-100 shadow-lg">
                             <div class="card-body">
@@ -73,7 +70,7 @@
 
                                 {% if post.image %}
                                     <div class="mb-4">
-                                        <img src="{{ post.image }}" alt="Image du post" class="rounded-lg max-w-full h-auto" />
+                                        <img src="{{ vich_uploader_asset(post, 'imageFile') }}" alt="Image du post" class="rounded-lg max-w-full h-auto" />
                                     </div>
                                 {% endif %}
 

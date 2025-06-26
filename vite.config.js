@@ -20,4 +20,19 @@ export default defineConfig({
             },
         },
     },
+    server: {
+        proxy: {
+            "/mercure": {
+                target: "https://demo.mercure.rocks/.well-known/mercure",
+                changeOrigin: true,
+                rewrite: (path) => path.replace(/^\/mercure/, ""),
+                configure: (proxy, options) => {
+                    proxy.on("proxyReq", (proxyReq, req, res) => {
+                        proxyReq.setHeader("Accept", "text/event-stream");
+                        proxyReq.setHeader("Cache-Control", "no-cache");
+                    });
+                },
+            },
+        },
+    },
 });
