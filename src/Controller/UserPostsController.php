@@ -1,0 +1,23 @@
+<?php
+
+namespace App\Controller;
+
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\Attribute\Route;
+use App\Entity\User;
+
+final class UserPostsController extends AbstractController
+{
+    #[Route('/user/posts', name: 'app_user_posts')]
+    public function index(): Response
+    {
+
+        $user = new User();
+        
+        return $this->render('user_posts/index.html.twig', [
+            'controller_name' => 'UserPostsController',
+            'userPost' => $userPost
+        ]);
+    }
+}

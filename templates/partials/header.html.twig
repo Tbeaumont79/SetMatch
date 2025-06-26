@@ -1,5 +1,5 @@
 <header>
-    <div class="navbar bg-base-100 shadow-sm">
+    <div class="navbar bg-base-100 shadow-sm fixed top-0">
         <div class="flex-1">
             <a href="{{ path('app_home') }}" class="btn btn-ghost text-xl">SetMatch</a>
         </div>
@@ -28,7 +28,7 @@
                             </a>
                         </li>
                         <li><a>Profil</a></li>
-                        <li><a>Mes Posts</a></li>
+                        <li><a href="{{ path('app_user_posts') }}">Mes Posts</a></li>
                         <li><a>Messages</a></li>
                         <li><a>Paramètres</a></li>
                         <li><hr></li>
