@@ -46,9 +46,9 @@ class Post
     #[ORM\ManyToOne(inversedBy: 'posts')]
     #[ORM\JoinColumn(nullable: false)]
     #[Assert\NotNull(
-        message: 'Un post doit avoir un auteur.'
+        message: 'Un post doit avoir un auteur.',
+        groups: ['service_validation']
     )]
-    #[Assert\Valid]
     private ?User $author = null;
 
     #[ORM\Column(length: 255, nullable: true)]
@@ -60,7 +60,7 @@ class Post
 
     #[Vich\UploadableField(mapping: 'post_images', fileNameProperty: 'image')]
     #[Assert\File(
-        maxSize: '5M',
+        maxSize: '2M',
         mimeTypes: [
             'image/jpeg',
             'image/png',

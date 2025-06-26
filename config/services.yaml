@@ -4,6 +4,20 @@
 # Put parameters here that don't need to change on each machine where the app is deployed
 # https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
 
+parameters:
+    # Configuration pour les posts
+    app.posts.default_limit: 10
+    app.posts.max_limit: 50
+
+    # Configuration pour l'upload d'images
+    app.uploads.max_size: "2M"
+    app.uploads.allowed_extensions:
+        - "jpg"
+        - "jpeg"
+        - "png"
+        - "webp"
+        - "avif"
+
 services:
     # default configuration for services in *this* file
     _defaults:
@@ -17,3 +31,8 @@ services:
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
+
+    # Configuration du PostService
+    App\Service\PostService:
+        arguments:
+            $defaultLimit: "%app.posts.default_limit%"
