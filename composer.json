@@ -12,6 +12,7 @@
         "doctrine/doctrine-migrations-bundle": "^3.4",
         "doctrine/orm": "^3.4",
         "lcobucci/jwt": "^5.5",
+        "liip/imagine-bundle": "^2.13",
         "pentatrion/vite-bundle": "^8.1",
         "symfony/console": "7.3.*",
         "symfony/dotenv": "7.3.*",
