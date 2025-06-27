@@ -1,0 +1,60 @@
+{% if chats %}
+    <div class="chat-list-content">
+        <div class="p-2">
+            {% for chat in chats %}
+                {% set otherParticipant = null %}
+                {% for participant in chat.participants %}
+                    {% if participant != app.user %}
+                        {% set otherParticipant = participant %}
+                    {% endif %}
+                {% endfor %}
+
+                {% if otherParticipant %}
+                    <div class="flex items-center gap-3 p-3 hover:bg-base-200 rounded cursor-pointer border-b border-base-300 last:border-b-0"
+                         data-action="click->chat#openChat"
+                         data-chat-id="{{ chat.id }}"
+                         data-chat-title="{{ otherParticipant.email|split('@')[0] }}">
+                        <div class="avatar">
+                            <div class="w-10 rounded-full">
+                                {% if otherParticipant.avatar %}
+                                    <img src="{{ otherParticipant.avatar }}" alt="Avatar" />
+                                {% else %}
+                                    <img src="https://img.daisyui.com/images/stock/photo-1534528741775-53994a69daeb.webp" alt="Avatar par défaut" />
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="font-semibold truncate">{{ otherParticipant.email|split('@')[0] }}</div>
+                            {% set lastMessage = chat.lastMessage %}
+                            {% if lastMessage %}
+                                <div class="text-sm text-base-content/70 truncate">
+                                    {% if lastMessage.author == app.user %}Vous: {% endif %}{{ lastMessage.content }}
+                                </div>
+                                <div class="text-xs text-base-content/50">
+                                    {{ lastMessage.createdAt|date('d/m H:i') }}
+                                </div>
+                            {% else %}
+                                <div class="text-sm text-base-content/50">Conversation démarrée</div>
+                            {% endif %}
+                        </div>
+                        {% if lastMessage and not lastMessage.isRead and lastMessage.author != app.user %}
+                            <div class="w-2 h-2 bg-primary rounded-full"></div>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+{% else %}
+    <div class="p-4">
+        <div class="text-center text-gray-500 py-8">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-3.582 8-8 8a8.955 8.955 0 01-4.126-.98L3 20l1.98-5.874A8.955 8.955 0 013 12c0-4.418 3.582-8 8-8s8 3.582 8 8z" />
+            </svg>
+            <p>Aucune conversation</p>
+            <button class="btn btn-primary btn-sm mt-2" data-action="click->chat#showNewChatModal">
+                Démarrer une conversation
+            </button>
+        </div>
+    </div>
+{% endif %}

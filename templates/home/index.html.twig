@@ -124,4 +124,8 @@
     </div>
 </div>
 
+{% if app.user %}
+    {% include 'chat/mercure_widget.html.twig' %}
+{% endif %}
+
 {% endblock %}

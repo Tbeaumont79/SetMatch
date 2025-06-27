@@ -5,12 +5,35 @@ export default class extends Controller {
 
     connect() {
         this.eventSource = null;
-        this.initializeMercure();
+        // Vérifier si Mercure est disponible avant de se connecter
+        this.checkMercureAndConnect();
     }
 
     disconnect() {
         if (this.eventSource) {
             this.eventSource.close();
+        }
+    }
+
+    async checkMercureAndConnect() {
+        try {
+            const response = await fetch(
+                "http://localhost:3000/.well-known/mercure?topic=test",
+                {
+                    method: "HEAD",
+                }
+            );
+
+            // Si Mercure répond, on peut se connecter
+            if (response.status !== 0) {
+                console.log("Mercure disponible, connexion...");
+                this.initializeMercure();
+            }
+        } catch (error) {
+            console.log(
+                "Mercure non disponible, mode hors ligne pour les posts"
+            );
+            // Ne pas se connecter à Mercure si non disponible
         }
     }
 
@@ -48,7 +71,14 @@ export default class extends Controller {
         };
 
         this.eventSource.onerror = (error) => {
-            console.error("Erreur Mercure EventSource:", error);
+            console.warn(
+                "Connexion Mercure interrompue pour les posts, passage en mode hors ligne"
+            );
+            // Fermer proprement la connexion en cas d'erreur
+            if (this.eventSource) {
+                this.eventSource.close();
+                this.eventSource = null;
+            }
         };
     }
 

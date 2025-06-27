@@ -1,0 +1,160 @@
+{# Widget de chat situé en bas à droite #}
+<div class="fixed bottom-4 right-4 z-50" data-controller="mercure-chat">
+    {# Bouton pour ouvrir/fermer le chat #}
+    <div class="chat-toggle" data-mercure-chat-target="toggle" data-action="click->mercure-chat#toggle">
+        <div class="btn btn-circle btn-primary shadow-lg relative">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-3.582 8-8 8a8.955 8.955 0 01-4.126-.98L3 20l1.98-5.874A8.955 8.955 0 013 12c0-4.418 3.582-8 8-8s8 3.582 8 8z" />
+            </svg>
+            {# Badge pour les notifications (caché par défaut) #}
+            <div class="badge badge-sm badge-error absolute -top-2 -right-2 hidden" data-mercure-chat-target="badge">0</div>
+        </div>
+    </div>
+
+    {# Fenêtre de chat #}
+    <div class="chat-window hidden" data-chat-target="window">
+        <div class="card w-80 h-96 bg-base-100 shadow-xl mb-4">
+            <div class="card-body p-0 flex flex-col">
+                {# En-tête du chat #}
+                <div class="bg-primary text-primary-content p-4 rounded-t-lg">
+                    <div class="flex justify-between items-center">
+                        <h3 class="font-semibold" data-chat-target="title">Conversations</h3>
+                        <div class="flex gap-2">
+                            <button class="btn btn-ghost btn-xs" data-action="click->chat#showNewChatModal">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                                </svg>
+                            </button>
+                            <button class="btn btn-ghost btn-xs" data-action="click->chat#close">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {# Liste des conversations #}
+                <div class="chat-list-view flex-1 overflow-y-auto" data-chat-target="chatList">
+                    <div class="p-4">
+                        <div class="text-center text-gray-500 py-8">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-3.582 8-8 8a8.955 8.955 0 01-4.126-.98L3 20l1.98-5.874A8.955 8.955 0 013 12c0-4.418 3.582-8 8-8s8 3.582 8 8z" />
+                            </svg>
+                            <p>Aucune conversation</p>
+                            <button class="btn btn-primary btn-sm mt-2" data-action="click->chat#showNewChatModal">
+                                Démarrer une conversation
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {# Vue de conversation #}
+                <div class="chat-conversation-view hidden flex-1 flex flex-col" data-chat-target="conversationView">
+                    {# En-tête de la conversation #}
+                    <div class="border-b p-4 bg-base-200">
+                        <div class="flex items-center gap-2">
+                            <button class="btn btn-ghost btn-xs" data-action="click->chat#backToList">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                                </svg>
+                            </button>
+                            <div class="avatar">
+                                <div class="w-8 rounded-full">
+                                    <img src="https://img.daisyui.com/images/stock/photo-1534528741775-53994a69daeb.webp" alt="Avatar" />
+                                </div>
+                            </div>
+                            <span class="font-semibold" data-chat-target="conversationTitle">Utilisateur</span>
+                        </div>
+                    </div>
+
+                    {# Messages #}
+                    <div class="messages flex-1 overflow-y-auto p-4 space-y-2" data-chat-target="messages">
+                        {# Les messages seront ajoutés dynamiquement #}
+                    </div>
+
+                    {# Zone de saisie #}
+                    <div class="border-t p-4">
+                        <form data-action="submit->chat#sendMessage" data-chat-target="messageForm">
+                            <div class="join w-full">
+                                <input
+                                    type="text"
+                                    placeholder="Tapez votre message..."
+                                    class="input input-bordered join-item flex-1"
+                                    data-chat-target="messageInput"
+                                    required
+                                />
+                                <button type="submit" class="btn btn-primary join-item">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+        {# Modal pour démarrer une nouvelle conversation #}
+    <div class="modal" data-chat-target="newChatModal" data-action="click->chat#closeModalOnBackdrop">
+        <div class="modal-box">
+            <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2" data-action="click->chat#closeNewChatModal">✕</button>
+            <h3 class="font-bold text-lg">Nouvelle conversation</h3>
+            <div class="py-4">
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Rechercher un utilisateur</span>
+                    </label>
+                    <input
+                        type="text"
+                        placeholder="Tapez un email..."
+                        class="input input-bordered"
+                        data-chat-target="userSearch"
+                        data-action="input->chat#searchUsers"
+                    />
+                </div>
+                <div class="mt-4 space-y-2" data-chat-target="searchResults">
+                    {# Résultats de recherche #}
+                </div>
+            </div>
+        </div>
+        <form method="dialog" class="modal-backdrop">
+            <button data-action="click->chat#closeNewChatModal">close</button>
+        </form>
+    </div>
+</div>
+
+<style>
+.chat-toggle {
+    cursor: pointer;
+}
+
+.chat-window {
+    animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.message {
+    max-width: 80%;
+}
+
+.message.mine {
+    margin-left: auto;
+}
+
+.message.theirs {
+    margin-right: auto;
+}
+</style>

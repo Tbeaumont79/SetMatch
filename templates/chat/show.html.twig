@@ -1,0 +1,79 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Conversation - SetMatch{% endblock %}
+
+{% block body %}
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-2xl mx-auto">
+        <div class="card bg-base-100 shadow-lg">
+            <div class="card-body">
+                {% set otherParticipant = null %}
+                {% for participant in chat.participants %}
+                    {% if participant != app.user %}
+                        {% set otherParticipant = participant %}
+                    {% endif %}
+                {% endfor %}
+
+                <div class="border-b pb-4 mb-4">
+                    <div class="flex items-center gap-3">
+                        <a href="{{ path('app_home') }}" class="btn btn-ghost btn-sm">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                            </svg>
+                            Retour
+                        </a>
+                        {% if otherParticipant %}
+                            <div class="avatar">
+                                <div class="w-10 rounded-full">
+                                    {% if otherParticipant.avatar %}
+                                        <img src="{{ otherParticipant.avatar }}" alt="Avatar" />
+                                    {% else %}
+                                        <img src="https://img.daisyui.com/images/stock/photo-1534528741775-53994a69daeb.webp" alt="Avatar par défaut" />
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div>
+                                <h2 class="card-title">{{ otherParticipant.email|split('@')[0] }}</h2>
+                                <p class="text-sm text-base-content/70">{{ otherParticipant.email }}</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="space-y-4 h-96 overflow-y-auto mb-4" id="messages-container">
+                    {% for message in chat.messages %}
+                        <div class="chat {{ message.author == app.user ? 'chat-end' : 'chat-start' }}">
+                            <div class="chat-header">
+                                {{ message.author.email|split('@')[0] }}
+                                <time class="text-xs opacity-50">{{ message.createdAt|date('d/m H:i') }}</time>
+                            </div>
+                            <div class="chat-bubble {{ message.author == app.user ? 'chat-bubble-primary' : 'chat-bubble-secondary' }}">
+                                {{ message.content }}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <form method="post" action="{{ path('app_chat_send_message', {id: chat.id}) }}" class="join w-full">
+                    <input type="text" name="content" placeholder="Tapez votre message..." class="input input-bordered join-item flex-1" required />
+                    <button type="submit" class="btn btn-primary join-item">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                        </svg>
+                        Envoyer
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Faire défiler vers le bas au chargement
+document.addEventListener('DOMContentLoaded', function() {
+    const container = document.getElementById('messages-container');
+    container.scrollTop = container.scrollHeight;
+});
+</script>
+
+{% endblock %}

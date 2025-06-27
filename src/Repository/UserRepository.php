@@ -33,6 +33,22 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
         $this->getEntityManager()->flush();
     }
 
+    /**
+     * Search users by email (excluding current user)
+     * @return User[] Returns an array of User objects
+     */
+    public function searchByEmail(string $query, User $currentUser): array
+    {
+        return $this->createQueryBuilder('u')
+            ->andWhere('u.email LIKE :query')
+            ->andWhere('u != :currentUser')
+            ->setParameter('query', '%' . $query . '%')
+            ->setParameter('currentUser', $currentUser)
+            ->setMaxResults(10)
+            ->getQuery()
+            ->getResult();
+    }
+
     //    /**
     //     * @return User[] Returns an array of User objects
     //     */
