@@ -11,7 +11,7 @@
 
                 {% if otherParticipant %}
                     <div class="flex items-center gap-3 p-3 hover:bg-base-200 rounded cursor-pointer border-b border-base-300 last:border-b-0"
-                         data-action="click->chat#openChat"
+                         data-action="click->mercure-chat#openChat"
                          data-chat-id="{{ chat.id }}"
                          data-chat-title="{{ otherParticipant.email|split('@')[0] }}">
                         <div class="avatar">
@@ -52,7 +52,7 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-3.582 8-8 8a8.955 8.955 0 01-4.126-.98L3 20l1.98-5.874A8.955 8.955 0 013 12c0-4.418 3.582-8 8-8s8 3.582 8 8z" />
             </svg>
             <p>Aucune conversation</p>
-            <button class="btn btn-primary btn-sm mt-2" data-action="click->chat#showNewChatModal">
+            <button class="btn btn-primary btn-sm mt-2" data-action="click->mercure-chat#showNewChatModal">
                 Démarrer une conversation
             </button>
         </div>

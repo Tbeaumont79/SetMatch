@@ -103,7 +103,7 @@ export default class extends Controller {
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-3.582 8-8 8a8.955 8.955 0 01-4.126-.98L3 20l1.98-5.874A8.955 8.955 0 013 12c0-4.418 3.582-8 8-8s8 3.582 8 8z" />
                     </svg>
                     <p>Aucune conversation</p>
-                    <button class="btn btn-primary btn-sm mt-2" data-action="click->chat#showNewChatModal">
+                    <button class="btn btn-primary btn-sm mt-2" data-action="click->mercure-chat#showNewChatModal">
                         Démarrer une conversation
                     </button>
                 </div>
@@ -244,7 +244,7 @@ export default class extends Controller {
             .map(
                 (user) => `
             <div class="p-3 hover:bg-gray-100 cursor-pointer border-b"
-                 data-action="click->chat#startChat"
+                 data-action="click->mercure-chat#startChat"
                  data-user-id="${user.id}"
                  data-user-name="${user.display_name}">
                 <div class="flex items-center">
