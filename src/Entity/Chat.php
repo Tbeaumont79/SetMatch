@@ -37,6 +37,7 @@ class Chat
     public function __construct()
     {
         $this->created_at = new \DateTimeImmutable();
+        $this->last_message_at = new \DateTimeImmutable();
         $this->participants = new ArrayCollection();
         $this->messages = new ArrayCollection();
     }

@@ -1,6 +1,11 @@
 import { Controller } from "@hotwired/stimulus";
+import BaseChatController from "./base_chat_controller.js";
 
-export default class extends Controller {
+/**
+ * Contrôleur Chat avec Mercure (temps réel)
+ * Hérite de BaseChatController - respecte LSP
+ */
+export default class extends BaseChatController {
     static targets = [
         "toggle",
         "window",
@@ -17,30 +22,32 @@ export default class extends Controller {
         "searchResults",
     ];
 
-    connect() {
+    initializeController() {
         console.log("Mercure Chat controller connecté !");
         this.isOpen = false;
         this.currentChatId = null;
         this.eventSource = null;
         this.mercureJWT = null;
         this.mercureUrl = null;
-
-        // Initialiser Mercure
         this.initializeMercure();
         this.loadChats();
     }
 
-    disconnect() {
-        if (this.eventSource) {
-            this.eventSource.close();
-        }
+    cleanup() {
+        super.cleanup();
+        this.closeMercureConnection();
     }
+
+    onChatOpened(chatId) {
+        super.onChatOpened(chatId);
+        this.connectToMercure(chatId);
+    }
+
+    // === Fonctionnalités Mercure ===
 
     async initializeMercure() {
         try {
-            const response = await fetch("/api/chat/jwt", {
-                credentials: "same-origin",
-            });
+            const response = await this.fetchWithCredentials("/api/chat/jwt");
             const data = await response.json();
 
             this.mercureJWT = data.jwt;
@@ -51,6 +58,152 @@ export default class extends Controller {
             );
         } catch (error) {
             console.error("Erreur lors de l'initialisation Mercure:", error);
+        }
+    }
+
+    connectToMercure(chatId) {
+        if (!this.mercureJWT || !this.mercureUrl) {
+            console.warn("JWT ou URL Mercure manquants");
+            return;
+        }
+
+        this.closeMercureConnection();
+
+        const topic = `chat/${chatId}`;
+        const url = new URL(this.mercureUrl);
+        url.searchParams.append("topic", topic);
+
+        this.eventSource = new EventSource(url.toString(), {
+            headers: {
+                Authorization: `Bearer ${this.mercureJWT}`,
+            },
+        });
+
+        this.eventSource.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                if (data.type === "new_message" && data.chat_id == chatId) {
+                    // Éviter de dupliquer son propre message
+                    if (!data.message.is_mine) {
+                        this.addMessageToDisplay(data.message);
+                        this.scrollToBottom();
+                    }
+                }
+            } catch (error) {
+                console.error(
+                    "Erreur lors du parsing du message Mercure:",
+                    error
+                );
+            }
+        };
+
+        this.eventSource.onerror = (error) => {
+            console.error("Erreur EventSource:", error);
+        };
+
+        console.log(`Connecté à Mercure pour le chat ${chatId}`);
+    }
+
+    closeMercureConnection() {
+        if (this.eventSource) {
+            this.eventSource.close();
+            this.eventSource = null;
+            console.log("Connexion Mercure fermée");
+        }
+    }
+
+    // === Implémentation des méthodes abstraites ===
+
+    async sendMessage(event) {
+        event.preventDefault();
+
+        if (!this.currentChatId) return;
+
+        const content = this.messageInputTarget.value.trim();
+        if (!content) return;
+
+        try {
+            const response = await this.fetchWithCredentials(
+                `/chat/${this.currentChatId}/send`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ content }),
+                }
+            );
+
+            if (response.ok) {
+                const message = await response.json();
+                // Ajouter le message localement (Mercure gèrera les autres utilisateurs)
+                this.addMessageToDisplay(message);
+                this.scrollToBottom();
+                this.messageInputTarget.value = "";
+            } else {
+                const errorData = await response.json();
+                console.error("Erreur serveur:", errorData);
+            }
+        } catch (error) {
+            console.error("Erreur lors de l'envoi du message:", error);
+        }
+    }
+
+    async startChat(event) {
+        event.preventDefault();
+
+        const userId = event.currentTarget.dataset.userId;
+        const userName = event.currentTarget.dataset.userName;
+
+        if (!userId) {
+            console.error("userId manquant");
+            return;
+        }
+
+        let responseClone;
+
+        try {
+            const response = await this.fetchWithCredentials("/chat/start", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ participant_id: parseInt(userId) }),
+            });
+
+            responseClone = response.clone();
+
+            if (response.ok) {
+                const data = await response.json();
+                this.closeNewChatModal();
+
+                this.currentChatId = data.chat_id;
+                this.conversationTitleTarget.textContent = userName;
+                this.chatListTarget.style.display = "none";
+                this.conversationViewTarget.classList.remove("hidden");
+                this.titleTarget.textContent = userName;
+
+                await this.loadMessages();
+                this.connectToMercure(data.chat_id);
+            } else {
+                const errorText = await responseClone.text();
+                console.error("Erreur serveur - Status:", response.status);
+                console.error("Réponse reçue:", errorText);
+            }
+        } catch (error) {
+            console.error("Erreur lors de la création du chat:", error);
+
+            if (responseClone) {
+                try {
+                    const errorText = await responseClone.text();
+                    console.error(
+                        "Contenu de la réponse qui a causé l'erreur:",
+                        errorText
+                    );
+                } catch (readError) {
+                    console.error("Impossible de lire la réponse:", readError);
+                }
+            }
         }
     }
 
@@ -113,25 +266,6 @@ export default class extends Controller {
         `;
     }
 
-    async openChat(event) {
-        const chatId = event.currentTarget.dataset.chatId;
-        const chatTitle = event.currentTarget.dataset.chatTitle;
-
-        this.currentChatId = chatId;
-        this.conversationTitleTarget.textContent = chatTitle;
-
-        // Afficher la vue de conversation
-        this.chatListTarget.style.display = "none";
-        this.conversationViewTarget.classList.remove("hidden");
-        this.titleTarget.textContent = chatTitle;
-
-        // Charger les messages
-        await this.loadMessages();
-
-        // Connecter à Mercure pour ce chat spécifique
-        this.connectToMercure(chatId);
-    }
-
     async loadMessages() {
         if (!this.currentChatId) return;
 
@@ -191,104 +325,6 @@ export default class extends Controller {
 
     scrollToBottom() {
         this.messagesTarget.scrollTop = this.messagesTarget.scrollHeight;
-    }
-
-    connectToMercure(chatId) {
-        if (!this.mercureJWT || !this.mercureUrl) {
-            console.warn("JWT ou URL Mercure manquants");
-            return;
-        }
-
-        // Fermer la connexion précédente si elle existe
-        this.closeMercureConnection();
-
-        // Topic spécifique au chat
-        const topic = `chat/${chatId}`;
-
-        // URL avec le JWT pour l'authentification
-        const url = new URL(this.mercureUrl);
-        url.searchParams.append("topic", topic);
-
-        // Créer EventSource avec authorization header
-        this.eventSource = new EventSource(url.toString(), {
-            withCredentials: true,
-            headers: {
-                Authorization: `Bearer ${this.mercureJWT}`,
-            },
-        });
-
-        this.eventSource.onmessage = (event) => {
-            console.log("Message Mercure reçu:", event.data);
-            try {
-                const data = JSON.parse(event.data);
-
-                if (
-                    data.type === "new_message" &&
-                    data.chat_id == this.currentChatId
-                ) {
-                    // Ajouter le nouveau message seulement s'il n'est pas de nous
-                    if (!data.message.is_mine) {
-                        this.addMessageToDisplay(data.message);
-                        this.scrollToBottom();
-                    }
-                }
-            } catch (error) {
-                console.error(
-                    "Erreur lors du parsing du message Mercure:",
-                    error
-                );
-            }
-        };
-
-        this.eventSource.onerror = (error) => {
-            console.error("Erreur EventSource:", error);
-        };
-
-        console.log(`Connecté à Mercure pour le topic: ${topic}`);
-    }
-
-    closeMercureConnection() {
-        if (this.eventSource) {
-            this.eventSource.close();
-            this.eventSource = null;
-            console.log("Connexion Mercure fermée");
-        }
-    }
-
-    async sendMessage(event) {
-        event.preventDefault();
-
-        if (!this.currentChatId) return;
-
-        const content = this.messageInputTarget.value.trim();
-        if (!content) return;
-
-        try {
-            const response = await fetch(`/chat/${this.currentChatId}/send`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                credentials: "same-origin",
-                body: JSON.stringify({ content }),
-            });
-
-            if (response.ok) {
-                const message = await response.json();
-
-                // Ajouter le message à l'affichage local (Mercure gèrera les autres utilisateurs)
-                this.addMessageToDisplay(message);
-                this.scrollToBottom();
-
-                // Vider le champ de saisie
-                this.messageInputTarget.value = "";
-            } else {
-                const errorData = await response.json();
-                console.error("Erreur serveur:", errorData);
-            }
-        } catch (error) {
-            console.error("Erreur lors de l'envoi du message:", error);
-        }
     }
 
     backToList() {
@@ -371,75 +407,6 @@ export default class extends Controller {
 
             this.searchResultsTarget.appendChild(userDiv);
         });
-    }
-
-    async startChat(event) {
-        event.preventDefault();
-        console.log("startChat appelé", event.currentTarget);
-
-        const userId = event.currentTarget.dataset.userId;
-        const userName = event.currentTarget.dataset.userName;
-
-        console.log("User ID:", userId, "User Name:", userName);
-
-        if (!userId) {
-            console.error("userId manquant");
-            return;
-        }
-
-        let responseClone;
-
-        try {
-            const response = await fetch("/chat/start", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                credentials: "same-origin",
-                body: JSON.stringify({ participant_id: parseInt(userId) }),
-            });
-
-            console.log("Response status:", response.status);
-
-            // Cloner la réponse pour pouvoir la lire plusieurs fois
-            responseClone = response.clone();
-
-            if (response.ok) {
-                const data = await response.json();
-                console.log("Response data:", data);
-
-                this.closeNewChatModal();
-
-                this.currentChatId = data.chat_id;
-                this.conversationTitleTarget.textContent = userName;
-                this.chatListTarget.style.display = "none";
-                this.conversationViewTarget.classList.remove("hidden");
-                this.titleTarget.textContent = userName;
-
-                await this.loadMessages();
-                this.connectToMercure(data.chat_id);
-            } else {
-                // Lire la réponse comme texte pour voir le contenu exact
-                const errorText = await responseClone.text();
-                console.error("Erreur serveur - Status:", response.status);
-                console.error("Réponse reçue:", errorText);
-            }
-        } catch (error) {
-            console.error("Erreur lors de la création du chat:", error);
-
-            // Si on a un clone de la réponse, essayons de lire son contenu
-            if (responseClone) {
-                try {
-                    const errorText = await responseClone.text();
-                    console.error(
-                        "Contenu de la réponse qui a causé l'erreur:",
-                        errorText
-                    );
-                } catch (readError) {
-                    console.error("Impossible de lire la réponse:", readError);
-                }
-            }
-        }
     }
 
     formatTime(dateString) {

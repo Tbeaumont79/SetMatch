@@ -1,6 +1,11 @@
 import { Controller } from "@hotwired/stimulus";
+import BaseChatController from "./base_chat_controller.js";
 
-export default class extends Controller {
+/**
+ * Contrôleur Chat simple (sans Mercure)
+ * Hérite de BaseChatController - respecte LSP
+ */
+export default class extends BaseChatController {
     static targets = [
         "toggle",
         "window",
@@ -17,7 +22,7 @@ export default class extends Controller {
         "searchResults",
     ];
 
-    connect() {
+    initializeController() {
         console.log("Chat controller connecté !");
         this.isOpen = false;
         this.currentChatId = null;
@@ -158,40 +163,25 @@ export default class extends Controller {
         if (!content) return;
 
         try {
-            const response = await fetch(`/chat/${this.currentChatId}/send`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ content }),
-            });
+            const response = await this.fetchWithCredentials(
+                `/chat/${this.currentChatId}/send`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ content }),
+                }
+            );
 
             if (response.ok) {
                 const message = await response.json();
-
-                // Ajouter le message à l'affichage
-                const messageDiv = document.createElement("div");
-                messageDiv.className = "message mine";
-                messageDiv.innerHTML = `
-                    <div class="chat chat-end">
-                        <div class="chat-header">
-                            Vous
-                            <time class="text-xs opacity-50">${this.formatTime(
-                                message.created_at
-                            )}</time>
-                        </div>
-                        <div class="chat-bubble chat-bubble-primary">
-                            ${message.content}
-                        </div>
-                    </div>
-                `;
-
-                this.messagesTarget.appendChild(messageDiv);
-                this.messagesTarget.scrollTop =
-                    this.messagesTarget.scrollHeight;
-
-                // Vider le champ de saisie
+                this.addMessageToDisplay(message);
+                this.scrollToBottom();
                 this.messageInputTarget.value = "";
+            } else {
+                const errorData = await response.json();
+                console.error("Erreur serveur:", errorData);
             }
         } catch (error) {
             console.error("Erreur lors de l'envoi du message:", error);
@@ -281,12 +271,9 @@ export default class extends Controller {
 
     async startChat(event) {
         event.preventDefault();
-        console.log("startChat appelé", event.currentTarget);
 
         const userId = event.currentTarget.dataset.userId;
         const userName = event.currentTarget.dataset.userName;
-
-        console.log("User ID:", userId, "User Name:", userName);
 
         if (!userId) {
             console.error("userId manquant");
@@ -294,7 +281,7 @@ export default class extends Controller {
         }
 
         try {
-            const response = await fetch("/chat/start", {
+            const response = await this.fetchWithCredentials("/chat/start", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -302,23 +289,16 @@ export default class extends Controller {
                 body: JSON.stringify({ participant_id: parseInt(userId) }),
             });
 
-            console.log("Response status:", response.status);
-
             if (response.ok) {
                 const data = await response.json();
-                console.log("Response data:", data);
-
-                // Fermer la modal
                 this.closeNewChatModal();
 
-                // Ouvrir le chat
                 this.currentChatId = data.chat_id;
                 this.conversationTitleTarget.textContent = userName;
                 this.chatListTarget.style.display = "none";
                 this.conversationViewTarget.classList.remove("hidden");
                 this.titleTarget.textContent = userName;
 
-                // Charger les messages
                 await this.loadMessages();
             } else {
                 const errorData = await response.json();

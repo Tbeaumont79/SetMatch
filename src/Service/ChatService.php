@@ -2,23 +2,22 @@
 
 namespace App\Service;
 
+use App\Contract\PersistenceInterface;
 use App\Entity\Chat;
 use App\Entity\Message;
 use App\Entity\User;
-use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Mercure\HubInterface;
 use Symfony\Component\Mercure\Update;
+
 
 class ChatService
 {
     public function __construct(
-        private EntityManagerInterface $entityManager,
+        private readonly PersistenceInterface $persistenceService,
         private ?HubInterface $mercureHub = null
     ) {}
 
-    /**
-     * Créer un nouveau message et publier la mise à jour via Mercure
-     */
+
     public function sendMessage(Chat $chat, User $author, string $content): Message
     {
         $message = new Message();
@@ -26,9 +25,8 @@ class ChatService
         $message->setAuthor($author);
         $message->setChat($chat);
 
-        // Sauvegarder en base
-        $this->entityManager->persist($message);
-        $this->entityManager->flush();
+        // Utilisation du service de persistance (DIP)
+        $this->persistenceService->persistAndFlush($message);
 
         // Publier via Mercure si disponible
         if ($this->mercureHub) {
@@ -38,9 +36,7 @@ class ChatService
         return $message;
     }
 
-    /**
-     * Publier une mise à jour de message via Mercure
-     */
+
     private function publishMessageUpdate(Chat $chat, Message $message): void
     {
         // Créer le topic spécifique au chat
@@ -75,17 +71,13 @@ class ChatService
         }
     }
 
-    /**
-     * Générer le topic Mercure pour un chat spécifique
-     */
+
     public function getChatTopic(Chat $chat): string
     {
         return sprintf('chat/%d', $chat->getId());
     }
 
-    /**
-     * Générer un JWT pour un utilisateur afin qu'il puisse s'abonner aux topics de ses chats
-     */
+
     public function generateUserJWT(User $user): string
     {
         // Récupérer tous les chats de l'utilisateur
@@ -96,13 +88,11 @@ class ChatService
             $topics[] = $this->getChatTopic($chat);
         }
 
-        // Généer le JWT avec les topics autorisés
+        // Générer le JWT avec les topics autorisés
         return $this->createJWT($topics);
     }
 
-    /**
-     * Créer un JWT pour les topics spécifiés
-     */
+
     private function createJWT(array $topics): string
     {
         $secret = $_ENV['MERCURE_JWT_SECRET'] ?? '!ChangeThisMercureHubJWTSecretKey!';
@@ -114,31 +104,5 @@ class ChatService
         ];
 
         return \Firebase\JWT\JWT::encode($payload, $secret, 'HS256');
-    }
-
-    /**
-     * Formater un message pour l'affichage
-     */
-    public function formatMessageForUser(Message $message, User $currentUser): array
-    {
-        return [
-            'id' => $message->getId(),
-            'content' => $message->getContent(),
-            'author' => [
-                'id' => $message->getAuthor()->getId(),
-                'email' => $message->getAuthor()->getEmail(),
-                'display_name' => explode('@', $message->getAuthor()->getEmail())[0],
-            ],
-            'created_at' => $message->getCreatedAt()->format('Y-m-d H:i:s'),
-            'is_mine' => $message->getAuthor() === $currentUser,
-        ];
-    }
-
-    /**
-     * Vérifier si un utilisateur a accès à un chat
-     */
-    public function canUserAccessChat(Chat $chat, User $user): bool
-    {
-        return $chat->hasParticipant($user);
     }
 }

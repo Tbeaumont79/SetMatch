@@ -2,6 +2,8 @@
 
 namespace App\Controller;
 
+use App\Contract\ChatManagementInterface;
+use App\Contract\DataFormatterInterface;
 use App\Entity\Chat;
 use App\Entity\Message;
 use App\Entity\User;
@@ -18,9 +20,23 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Security\Core\Exception\InvalidCsrfTokenException;
 use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
 
+/**
+ * Contrôleur pour la gestion des chats
+ * Respecte tous les principes SOLID
+ */
 #[IsGranted('ROLE_USER')]
 class ChatController extends AbstractController
 {
+    public function __construct(
+        private readonly ChatService $chatService,
+        private readonly ChatManagementInterface $chatManagementService,
+        private readonly DataFormatterInterface $dataFormatter
+    ) {}
+
+    /**
+     * Liste les chats de l'utilisateur
+     * Respecte SRP - une seule responsabilité : lister les chats
+     */
     #[Route('/chat', name: 'app_chat_list', methods: ['GET'])]
     public function list(ChatRepository $chatRepository): Response
     {
@@ -32,10 +48,13 @@ class ChatController extends AbstractController
         ]);
     }
 
+    /**
+     * Démarre une nouvelle conversation
+     * Respecte SRP - une seule responsabilité : créer un chat
+     */
     #[Route('/chat/start', name: 'app_chat_start', methods: ['POST'])]
-    public function startChat(Request $request, UserRepository $userRepository, ChatRepository $chatRepository, EntityManagerInterface $entityManager): JsonResponse
+    public function startChat(Request $request, UserRepository $userRepository): JsonResponse
     {
-        $user = $this->getUser();
         $data = json_decode($request->getContent(), true);
         $participantId = $data['participant_id'] ?? null;
 
@@ -48,33 +67,29 @@ class ChatController extends AbstractController
             return $this->json(['error' => 'Utilisateur introuvable'], 404);
         }
 
-        if ($participant === $user) {
-            return $this->json(['error' => 'Vous ne pouvez pas démarrer une conversation avec vous-même'], 400);
+        try {
+            // Utilisation du service de gestion de chat (DIP)
+            $chat = $this->chatManagementService->createOrGetExistingChat(
+                $this->getUser(),
+                $participant
+            );
+
+            return $this->json(['chat_id' => $chat->getId()]);
+        } catch (\InvalidArgumentException $e) {
+            return $this->json(['error' => $e->getMessage()], 400);
         }
-
-        // Vérifier si une conversation existe déjà
-        $existingChat = $chatRepository->findExistingChat($user, $participant);
-        if ($existingChat) {
-            return $this->json(['chat_id' => $existingChat->getId()]);
-        }
-
-        // Créer une nouvelle conversation
-        $chat = new Chat();
-        $chat->addParticipant($user);
-        $chat->addParticipant($participant);
-
-        $entityManager->persist($chat);
-        $entityManager->flush();
-
-        return $this->json(['chat_id' => $chat->getId()]);
     }
 
+    /**
+     * Affiche un chat spécifique
+     * Respecte SRP - une seule responsabilité : afficher un chat
+     */
     #[Route('/chat/{id}', name: 'app_chat_show', methods: ['GET'])]
     public function show(Chat $chat): Response
     {
         $user = $this->getUser();
 
-        if (!$chat->hasParticipant($user)) {
+        if (!$this->chatManagementService->canUserAccessChat($chat, $user)) {
             throw $this->createAccessDeniedException('Vous n\'avez pas accès à cette conversation.');
         }
 
@@ -83,40 +98,36 @@ class ChatController extends AbstractController
         ]);
     }
 
+    /**
+     * Récupère les messages d'un chat
+     * Respecte SRP et ISP - interface ségrégée pour le formatage
+     */
     #[Route('/chat/{id}/messages', name: 'app_chat_messages', methods: ['GET'])]
     public function getMessages(Chat $chat): JsonResponse
     {
-        $user = $this->getUser();
-
-        if (!$chat->hasParticipant($user)) {
+        if (!$this->chatManagementService->canUserAccessChat($chat, $this->getUser())) {
             throw $this->createAccessDeniedException();
         }
 
-        $messages = $chat->getMessages();
-        $messagesData = [];
-
-        foreach ($messages as $message) {
-            $messagesData[] = [
-                'id' => $message->getId(),
-                'content' => $message->getContent(),
-                'author' => [
-                    'id' => $message->getAuthor()->getId(),
-                    'email' => $message->getAuthor()->getEmail(),
-                ],
-                'created_at' => $message->getCreatedAt()->format('Y-m-d H:i:s'),
-                'is_mine' => $message->getAuthor() === $user,
-            ];
-        }
+        // Utilisation du service de formatage (SRP + DIP)
+        $messagesData = array_map(
+            fn($message) => $this->dataFormatter->formatMessageForApi($message, $this->getUser()),
+            $chat->getMessages()->toArray()
+        );
 
         return $this->json($messagesData);
     }
 
+    /**
+     * Envoie un message dans un chat
+     * Respecte SRP - une seule responsabilité : envoyer un message
+     */
     #[Route('/chat/{id}/send', name: 'app_chat_send_message', methods: ['POST'])]
-    public function sendMessage(Chat $chat, Request $request, ChatService $chatService): JsonResponse
+    public function sendMessage(Chat $chat, Request $request): JsonResponse
     {
         $user = $this->getUser();
 
-        if (!$chatService->canUserAccessChat($chat, $user)) {
+        if (!$this->chatManagementService->canUserAccessChat($chat, $user)) {
             throw $this->createAccessDeniedException();
         }
 
@@ -127,42 +138,46 @@ class ChatController extends AbstractController
             return $this->json(['error' => 'Le message ne peut pas être vide'], 400);
         }
 
-        // Utiliser le service ChatService qui gère Mercure automatiquement
-        $message = $chatService->sendMessage($chat, $user, $content);
+        // Délégation au service de chat (SRP)
+        $message = $this->chatService->sendMessage($chat, $user, $content);
 
-        // Retourner les données formatées
-        return $this->json($chatService->formatMessageForUser($message, $user));
+        // Utilisation du service de formatage (DIP)
+        return $this->json($this->dataFormatter->formatMessageForApi($message, $user));
     }
 
+    /**
+     * Recherche des utilisateurs
+     * Respecte SRP - une seule responsabilité : rechercher des utilisateurs
+     */
     #[Route('/api/users/search', name: 'app_users_search', methods: ['GET'])]
     public function searchUsers(Request $request, UserRepository $userRepository): JsonResponse
     {
         $query = $request->query->get('q', '');
-        $currentUser = $this->getUser();
 
         if (strlen($query) < 2) {
             return $this->json([]);
         }
 
-        $users = $userRepository->searchByEmail($query, $currentUser);
-        $usersData = [];
+        $users = $userRepository->searchByEmail($query, $this->getUser());
 
-        foreach ($users as $user) {
-            $usersData[] = [
-                'id' => $user->getId(),
-                'email' => $user->getEmail(),
-                'display_name' => explode('@', $user->getEmail())[0],
-            ];
-        }
+        // Utilisation du service de formatage (SRP + DIP)
+        $usersData = array_map(
+            fn($user) => $this->dataFormatter->formatUserForApi($user),
+            $users
+        );
 
         return $this->json($usersData);
     }
 
+    /**
+     * Génère un JWT pour Mercure
+     * Respecte SRP - une seule responsabilité : générer un JWT
+     */
     #[Route('/api/chat/jwt', name: 'app_chat_jwt', methods: ['GET'])]
-    public function getChatJWT(ChatService $chatService): JsonResponse
+    public function getChatJWT(): JsonResponse
     {
         $user = $this->getUser();
-        $jwt = $chatService->generateUserJWT($user);
+        $jwt = $this->chatService->generateUserJWT($user);
 
         return $this->json([
             'jwt' => $jwt,

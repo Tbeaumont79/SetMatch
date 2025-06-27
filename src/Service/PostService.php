@@ -2,22 +2,23 @@
 
 namespace App\Service;
 
+use App\Contract\PersistenceInterface;
+use App\Contract\ValidatorInterface as AppValidatorInterface;
 use App\Entity\Post;
 use App\Entity\User;
 use App\Exception\PostException;
 use App\Repository\PostRepository;
-use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Component\Validator\Validator\ValidatorInterface;
+
 
 class PostService
 {
     public function __construct(
-        private readonly EntityManagerInterface $entityManager,
+        private readonly PersistenceInterface $persistenceService,
         private readonly PostRepository $postRepository,
-        private readonly ValidatorInterface $validator,
+        private readonly AppValidatorInterface $validationService,
         private readonly int $defaultLimit = 10
-    ) {
-    }
+    ) {}
+
 
     public function createPost(string $content, User $author, ?string $image = null): Post
     {
@@ -28,21 +29,19 @@ class PostService
         $post = new Post();
         $post->setContent($content);
         $post->setAuthor($author);
+
         if ($image) {
             $post->setImage($image);
         }
-        $violations = $this->validator->validate($post);
-        if (count($violations) > 0) {
-            $errors = [];
-            foreach ($violations as $violation) {
-                $errors[] = $violation->getMessage();
-            }
-            throw PostException::invalidContent(implode(', ', $errors));
-        }
-        $this->entityManager->persist($post);
+
+        // Délégation de la validation au service spécialisé (DIP)
+        $this->validationService->validateEntity($post);
+
+        $this->persistenceService->persist($post);
 
         return $post;
     }
+
 
     public function getRecentPosts(?int $limit = null): array
     {
@@ -57,10 +56,12 @@ class PostService
         return $this->postRepository->findPostsByAuthor($userId, $limit);
     }
 
+
     public function getPostsByUserEntity(User $user, ?int $limit = null): array
     {
         return $this->getPostsByUser($user->getId(), $limit);
     }
+
 
     public function findPostById(int $id): Post
     {
@@ -73,35 +74,30 @@ class PostService
         return $post;
     }
 
+
     public function searchPosts(string $searchTerm, ?int $limit = null): array
     {
         $limit = $limit ?? $this->defaultLimit;
         return $this->postRepository->searchPosts($searchTerm, $limit);
     }
 
+
     public function savePostWithValidation(Post $post): void
     {
-        $violations = $this->validator->validate($post, null, ['service_validation']);
-        if (count($violations) > 0) {
-            $errors = [];
-            foreach ($violations as $violation) {
-                $errors[] = $violation->getMessage();
-            }
-            throw PostException::invalidContent(implode(', ', $errors));
-        }
-
-        $this->entityManager->persist($post);
+        // Utilisation du service de validation (DIP + SRP)
+        $this->validationService->validateEntity($post, ['service_validation']);
+        $this->persistenceService->persist($post);
     }
+
 
     public function savePost(Post $post): void
     {
-        $this->entityManager->persist($post);
-        $this->entityManager->flush();
+        $this->persistenceService->persistAndFlush($post);
     }
 
 
     public function flush(): void
     {
-        $this->entityManager->flush();
+        $this->persistenceService->flush();
     }
 }

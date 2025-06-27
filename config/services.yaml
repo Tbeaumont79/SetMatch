@@ -32,7 +32,23 @@ services:
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
 
-    # Configuration du PostService
+    # === Configuration des Services SOLID ===
+
+    # Interface Bindings - Respecte le principe DIP (Dependency Inversion)
+    App\Contract\ValidatorInterface: '@App\Service\EntityValidationService'
+    App\Contract\DataFormatterInterface: '@App\Service\ApiDataFormatterService'
+    App\Contract\ChatManagementInterface: '@App\Service\ChatManagementService'
+    App\Contract\PersistenceInterface: '@App\Service\DoctrinePersistenceService'
+
+    # Services spécialisés - Respectent le principe SRP (Single Responsibility)
+    App\Service\EntityValidationService: ~
+    App\Service\ApiDataFormatterService: ~
+    App\Service\ChatManagementService: ~
+    App\Service\DoctrinePersistenceService: ~
+
+    # Configuration du PostService avec ses nouvelles dépendances
     App\Service\PostService:
         arguments:
             $defaultLimit: "%app.posts.default_limit%"
+            $persistenceService: '@App\Contract\PersistenceInterface'
+            $validationService: '@App\Contract\ValidatorInterface'
